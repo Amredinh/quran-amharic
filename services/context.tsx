@@ -3,6 +3,13 @@ import { Translation, QuranData } from '../types';
 import { MOCK_AMHARIC_XML, MOCK_ARABIC_XML } from '../constants';
 import { parseQuranXML } from './quranService';
 
+interface DonationConfig {
+  message: string;
+  buttonText: string;
+  link: string;
+  enabled: boolean;
+}
+
 interface AppContextType {
   arabicData: QuranData;
   translations: Translation[];
@@ -10,20 +17,23 @@ interface AppContextType {
   currentTranslationId: string;
   setTranslationId: (id: string) => void;
   
-  // Audio Player State (Global Footer Player)
   audioPlayerState: {
     isPlaying: boolean;
     currentUrl: string | null;
     reciterName: string;
     surahName: string;
     showPlayer: boolean;
+    surahId: number;
+    reciterFolder: string;
   };
-  playSurahAudio: (url: string, surahName: string, reciterName: string) => void;
+  playSurahAudio: (url: string, surahName: string, reciterName: string, surahId: number, reciterFolder: string) => void;
   stopAudio: () => void;
 
-  // UI State
   darkMode: boolean;
   toggleDarkMode: () => void;
+
+  donationConfig: DonationConfig;
+  updateDonationConfig: (config: DonationConfig) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -32,30 +42,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [arabicData] = useState<QuranData>(parseQuranXML(MOCK_ARABIC_XML));
   const [translations, setTranslations] = useState<Translation[]>([]);
   const [currentTranslationId, setTranslationId] = useState<string>('am');
-  
   const [darkMode, setDarkMode] = useState(false);
+  const [donationConfig, setDonationConfig] = useState<DonationConfig>({
+    message: "Help us keep Quran.et free and sustainable for the Ethiopian community.",
+    buttonText: "Donate Now",
+    link: "https://example.com/donate",
+    enabled: true
+  });
 
   const [audioPlayerState, setAudioPlayerState] = useState({
     isPlaying: false,
     currentUrl: null as string | null,
     reciterName: '',
     surahName: '',
-    showPlayer: false
+    showPlayer: false,
+    surahId: 1,
+    reciterFolder: ''
   });
 
   useEffect(() => {
-    // Load default Amharic translation
     const parsed = parseQuranXML(MOCK_AMHARIC_XML);
     setTranslations([{ id: 'am', name: 'Amharic', data: parsed }]);
 
-    // Initialize Dark Mode from local storage
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
       setDarkMode(true);
       document.documentElement.classList.add('dark');
-    } else {
-      setDarkMode(false);
-      document.documentElement.classList.remove('dark');
+    }
+
+    const savedDonation = localStorage.getItem('donationConfig');
+    if (savedDonation) {
+      setDonationConfig(JSON.parse(savedDonation));
     }
   }, []);
 
@@ -78,18 +95,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTranslations(prev => [...prev.filter(t => t.id !== id), { id, name, data: parsed }]);
   };
 
-  const playSurahAudio = (url: string, surahName: string, reciterName: string) => {
+  const playSurahAudio = (url: string, surahName: string, reciterName: string, surahId: number, reciterFolder: string) => {
     setAudioPlayerState({
       isPlaying: true,
       currentUrl: url,
       surahName,
       reciterName,
-      showPlayer: true
+      showPlayer: true,
+      surahId,
+      reciterFolder
     });
   };
 
   const stopAudio = () => {
     setAudioPlayerState(prev => ({ ...prev, isPlaying: false, showPlayer: false, currentUrl: null }));
+  };
+
+  const updateDonationConfig = (config: DonationConfig) => {
+    setDonationConfig(config);
+    localStorage.setItem('donationConfig', JSON.stringify(config));
   };
 
   return (
@@ -103,7 +127,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       playSurahAudio,
       stopAudio,
       darkMode,
-      toggleDarkMode
+      toggleDarkMode,
+      donationConfig,
+      updateDonationConfig
     }}>
       {children}
     </AppContext.Provider>
