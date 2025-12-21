@@ -13,7 +13,9 @@ const ReadingPage: React.FC = () => {
 
   // Load Data
   const surahArabic = arabicData.suras.find(s => s.index === surahIndex);
-  const translation = translations.find(t => t.id === (lang || currentTranslationId));
+  // Priority: URL Param > Current Session Context
+  const activeLangId = lang || currentTranslationId;
+  const translation = translations.find(t => t.id === activeLangId);
   const surahTranslation = translation?.data.suras.find(s => s.index === surahIndex);
 
   // Settings State
@@ -33,6 +35,11 @@ const ReadingPage: React.FC = () => {
   const [showDetail, setShowDetail] = useState<number | null>(null); // Ayah index
   const [showCopy, setShowCopy] = useState<number | null>(null); // Ayah index
 
+  // SCROLL TO TOP ON MOUNT
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [id]);
+
   // Initialize Audio Ref once
   useEffect(() => {
     if (!audioRef.current) {
@@ -42,9 +49,6 @@ const ReadingPage: React.FC = () => {
     const audio = audioRef.current;
 
     const handleEnded = () => {
-        // Since activeAyah comes from closure, we need to be careful. 
-        // Using a functional update or checking a ref for activeAyah would be better in complex apps.
-        // For simplicity, we trust the re-render cycle or manually handle 'next'.
         setIsPlaying(false);
         setActiveAyah(prev => {
             if (prev !== null && surahArabic && prev < surahArabic.ayas.length - 1) {
@@ -61,7 +65,7 @@ const ReadingPage: React.FC = () => {
         audio.removeEventListener('ended', handleEnded);
         audio.pause();
     };
-  }, [surahArabic]); // Re-bind if surah changes
+  }, [surahArabic]);
 
   // Handle URL Query for specific ayah highlighting
   useEffect(() => {
@@ -90,7 +94,6 @@ const ReadingPage: React.FC = () => {
   const playAyah = (index: number) => {
     if (!audioRef.current) return;
     
-    // If clicking same ayah while playing, pause it
     if (activeAyah === index && isPlaying) {
         audioRef.current.pause();
         setIsPlaying(false);
@@ -106,10 +109,8 @@ const ReadingPage: React.FC = () => {
     audioRef.current.play().catch(e => {
         console.error("Play error", e);
         setIsPlaying(false);
-        alert("Audio source not available for this Ayah.");
     });
 
-    // Scroll
     document.getElementById(`ayah-${index}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
 
@@ -149,32 +150,32 @@ const ReadingPage: React.FC = () => {
       {showSettings && (
         <div className="fixed top-32 right-4 md:right-10 z-40 bg-white dark:bg-gray-800 shadow-2xl rounded-xl p-6 w-80 border border-gray-100 dark:border-gray-700 animate-fade-in text-gray-800 dark:text-gray-100">
            <div className="flex justify-between mb-4">
-              <h3 className="font-bold">Settings</h3>
+              <h3 className="font-bold">Display Settings</h3>
               <button onClick={() => setShowSettings(false)} className="text-gray-400 hover:text-red-500"><X size={20}/></button>
            </div>
            
            <div className="space-y-6">
               <div>
-                <label className="text-sm text-gray-500 dark:text-gray-400 mb-1 block">Arabic Size</label>
+                <label className="text-sm text-gray-500 dark:text-gray-400 mb-1 block">Arabic Font Size</label>
                 <input type="range" min="18" max="60" value={arabicSize} onChange={(e) => setArabicSize(Number(e.target.value))} className="w-full accent-primary" />
               </div>
               <div>
-                <label className="text-sm text-gray-500 dark:text-gray-400 mb-1 block">Translation Size</label>
+                <label className="text-sm text-gray-500 dark:text-gray-400 mb-1 block">Translation Font Size</label>
                 <input type="range" min="12" max="30" value={transSize} onChange={(e) => setTransSize(Number(e.target.value))} className="w-full accent-primary" />
               </div>
               <div className="flex justify-between items-center">
-                 <span className="text-sm">Show Arabic</span>
+                 <span className="text-sm">Arabic Visibility</span>
                  <input type="checkbox" checked={showArabic} onChange={(e) => setShowArabic(e.target.checked)} className="accent-primary w-5 h-5" />
               </div>
               <div className="flex justify-between items-center">
-                 <span className="text-sm">Show Translation</span>
+                 <span className="text-sm">Translation Visibility</span>
                  <input type="checkbox" checked={showTrans} onChange={(e) => setShowTrans(e.target.checked)} className="accent-primary w-5 h-5" />
               </div>
               <div>
-                 <span className="text-sm text-gray-500 dark:text-gray-400 block mb-2">Mode</span>
+                 <span className="text-sm text-gray-500 dark:text-gray-400 block mb-2">Paper Texture Mode</span>
                  <div className="flex space-x-2">
-                    <button onClick={() => setReadingMode('default')} className={`flex-1 py-1 text-sm rounded border ${readingMode==='default' ? 'bg-primary text-white border-primary' : 'border-gray-300 dark:border-gray-600'}`}>Clean</button>
-                    <button onClick={() => setReadingMode('paper')} className={`flex-1 py-1 text-sm rounded border ${readingMode==='paper' ? 'bg-[#e3dcc8] text-gray-900 border-[#d3c9b0] font-bold' : 'border-gray-300 dark:border-gray-600'}`}>Paper</button>
+                    <button onClick={() => setReadingMode('default')} className={`flex-1 py-1 text-sm rounded border ${readingMode==='default' ? 'bg-primary text-white border-primary' : 'border-gray-300 dark:border-gray-600'}`}>Modern</button>
+                    <button onClick={() => setReadingMode('paper')} className={`flex-1 py-1 text-sm rounded border ${readingMode==='paper' ? 'bg-[#e3dcc8] text-gray-900 border-[#d3c9b0] font-bold' : 'border-gray-300 dark:border-gray-600'}`}>Classic</button>
                  </div>
               </div>
            </div>
@@ -195,7 +196,6 @@ const ReadingPage: React.FC = () => {
                     {aya.index}
                  </div>
                  
-                 {/* Actions */}
                  <button onClick={() => playAyah(idx)} className="text-gray-400 hover:text-primary transition">
                     {activeAyah === idx && isPlaying ? <Pause size={20} /> : <Play size={20} />}
                  </button>
@@ -217,27 +217,26 @@ const ReadingPage: React.FC = () => {
 
              {showDetail === idx && (
                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                  <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-lg relative shadow-2xl">
+                  <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-lg relative shadow-2xl animate-fade-in">
                      <button onClick={() => setShowDetail(null)} className="absolute top-4 right-4 text-gray-500 hover:text-red-500"><X size={24} /></button>
-                     <h3 className="font-bold mb-4 text-gray-800 dark:text-white">Detail View</h3>
+                     <h3 className="font-bold mb-4 text-gray-800 dark:text-white">Verse Detail</h3>
                      <p className="font-arabic text-right text-2xl mb-4 leading-loose text-gray-900 dark:text-white">{aya.text}</p>
                      
                      <div className="mb-4">
-                       <label className="text-xs text-gray-400 uppercase">Change Language</label>
+                       <label className="text-xs text-gray-400 uppercase font-bold mb-1 block">Quick Language Switch</label>
                        <select 
-                        value={currentTranslationId}
+                        value={activeLangId}
                         onChange={(e) => setTranslationId(e.target.value)}
                         className="w-full mt-1 p-2 border rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white border-gray-200 dark:border-gray-600"
                        >
                          {translations.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                        </select>
                      </div>
-                     <p className="text-lg text-gray-700 dark:text-gray-200">{surahTranslation?.ayas[idx].text}</p>
+                     <p className="text-lg text-gray-700 dark:text-gray-200">{surahTranslation?.ayas[idx]?.text || "Translation not loaded for this version."}</p>
                   </div>
                </div>
              )}
 
-             {/* Bismillah handling */}
              {aya.bismillah && (
                 <div className="text-center mb-6 font-arabic text-2xl text-secondary dark:text-primary opacity-80">
                    {aya.bismillah}
@@ -258,7 +257,7 @@ const ReadingPage: React.FC = () => {
                   className={`text-left leading-relaxed ${readingMode === 'paper' ? 'text-gray-800' : 'text-gray-700 dark:text-gray-300'}`}
                   style={{ fontSize: `${transSize}px` }}
                 >
-                   {surahTranslation?.ayas[idx]?.text || "Translation not available for this verse in the mock data."}
+                   {surahTranslation?.ayas[idx]?.text || "This verse translation is not yet in our database."}
                 </p>
              )}
           </div>
