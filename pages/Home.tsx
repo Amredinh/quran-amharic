@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useApp } from '../services/context';
 import { SURAH_NAMES_EN, REVELATION_ORDER, BLOG_POSTS } from '../constants';
-import { Search, ArrowRight, BookOpen, Headphones, ChevronDown, Globe } from 'lucide-react';
+import { SURAH_METADATA } from '../services/surahMetadata';
+import { Search, ArrowRight, BookOpen, Headphones, ChevronDown, Globe, Heart, Trash2, BookmarkCheck } from 'lucide-react';
 import Cookies from 'js-cookie';
 
 const Home: React.FC = () => {
-  const { arabicData, currentTranslationId, setTranslationId, translations } = useApp();
+  const { arabicData, currentTranslationId, setTranslationId, translations, favorites, removeFavorite } = useApp();
   const navigate = useNavigate();
   
   // Hero State
@@ -59,35 +60,80 @@ const Home: React.FC = () => {
   };
 
   const displayedSurahs = sortOrder === 'regular' 
-    ? SURAH_NAMES_EN.map((name, i) => ({ id: i + 1, name }))
-    : REVELATION_ORDER.map(id => ({ id, name: SURAH_NAMES_EN[id - 1] }));
+    ? SURAH_METADATA
+    : REVELATION_ORDER.map(id => SURAH_METADATA.find(m => m.id === id)!).filter(Boolean);
+
+  const isLanguageAmharic = currentTranslationId === 'am';
 
   return (
     <div className="space-y-12 animate-fade-in">
-      {/* Reminder Section */}
+      {/* Continuing & Welcome Banner */}
       <section>
         {lastRead ? (
           <div className="bg-amber-50 dark:bg-amber-900/30 border-l-4 border-amber-500 p-6 rounded-r-2xl flex justify-between items-center shadow-lg shadow-amber-500/5 transition-colors">
             <div>
-              <h3 className="text-amber-800 dark:text-amber-400 font-bold text-lg">Continue Reading</h3>
-              <p className="text-amber-700 dark:text-amber-300">You were reading Surah {lastRead.name}</p>
+              <h3 className="text-amber-800 dark:text-amber-400 font-bold text-lg">ቀጥል ማንበብ | Continue Reading</h3>
+              <p className="text-amber-700 dark:text-amber-300">የመጨረሻው የተነበበው ሱራ፡ {lastRead.name}</p>
             </div>
-            <Link to={`/${currentTranslationId}/${lastRead.surahId}`} className="bg-amber-500 text-white px-6 py-2.5 rounded-xl hover:bg-amber-600 transition shadow-md font-bold">
-              Continue
+            <Link to={`/${currentTranslationId}/${lastRead.surahId}`} className="bg-amber-500 text-white px-6 py-2.5 rounded-xl hover:bg-amber-600 transition shadow-md font-bold text-sm">
+              ማንበብ ቀጥል (Resume)
             </Link>
           </div>
         ) : (
           <div className="bg-primary/5 dark:bg-primary/10 border-l-4 border-primary p-6 rounded-r-2xl flex justify-between items-center shadow-lg transition-colors">
             <div>
-              <h3 className="text-primary font-bold text-lg">New Reader?</h3>
-              <p className="text-gray-600 dark:text-gray-300">Start with Al-Fatiha (The Opening).</p>
+              <h3 className="text-primary font-bold text-lg">መግቢያ | Start Studying</h3>
+              <p className="text-gray-600 dark:text-gray-300">በሱረቱል አል-ፋቲሃ (መክፈቻው) ይጀምሩ።</p>
             </div>
-            <Link to={`/${currentTranslationId}/1`} className="bg-primary text-white px-6 py-2.5 rounded-xl hover:bg-green-600 transition shadow-md font-bold">
-              Start Now
+            <Link to={`/${currentTranslationId}/1`} className="bg-primary text-white px-6 py-2.5 rounded-xl hover:bg-green-600 transition shadow-md font-bold text-sm">
+              አሁን ጀምር (Start Now)
             </Link>
           </div>
         )}
       </section>
+
+      {/* Bookmarks & Favorites Section (Request Part 3) */}
+      {favorites.length > 0 && (
+        <section className="bg-gradient-to-br from-emerald-900 to-teal-950 text-white p-6 md:p-8 rounded-[2rem] shadow-xl border border-white/10 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -mr-12 -mt-12"></div>
+          <div className="relative z-10 space-y-6">
+            <div className="flex items-center space-x-2.5">
+              <span className="p-2 bg-yellow-500 text-slate-900 rounded-xl shadow-md"><Heart className="fill-current w-5 h-5"/></span>
+              <div>
+                <h3 className="text-xl font-extrabold tracking-tight">የተቀመጡ ሱራዎችና አንቀጾች | Bookmarked Quranic Verses</h3>
+                <p className="text-xs text-emerald-300/80 font-medium">Your customized favorite chapters and verses catalog, stored locally.</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {favorites.map((fav) => (
+                <div key={fav.id} className="bg-white/10 hover:bg-white/15 border border-white/5 rounded-2xl p-4 flex flex-col justify-between space-y-3 group transition">
+                  <div>
+                    <div className="flex justify-between items-start">
+                      <span className="text-[10px] uppercase font-black bg-yellow-500 text-slate-950 p-1 px-2.5 rounded-md leading-none select-none">
+                        {fav.type === 'surah' ? 'ሱራ (Sura)' : `ቁጥር (Aya ${fav.ayahNo})`}
+                      </span>
+                      <button onClick={() => removeFavorite(fav.id)} className="text-white/40 hover:text-red-400 p-1 hover:bg-white/5 rounded transition">
+                        <Trash2 size={16}/>
+                      </button>
+                    </div>
+                    <h4 className="font-extrabold text-base mt-2">{fav.suraName}</h4>
+                    {fav.type === 'ayah' && (
+                      <p className="text-xs text-white/70 italic line-clamp-2 mt-1.5 font-medium">"{fav.textTrans}"</p>
+                    )}
+                  </div>
+                  <Link 
+                    to={`/${currentTranslationId}/${fav.suraId}${fav.type === 'ayah' ? `?aya=${fav.ayahNo}` : ''}`} 
+                    className="text-xs text-emerald-300 hover:text-white font-bold inline-flex items-center gap-1 self-start transition-all"
+                  >
+                    ክፈት (Go to study) <ArrowRight size={12}/>
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Hero Section */}
       <section className="bg-white dark:bg-gray-800 rounded-[2.5rem] shadow-2xl overflow-hidden p-8 md:p-16 relative border border-gray-100 dark:border-gray-700 transition-colors">
@@ -96,10 +142,10 @@ const Home: React.FC = () => {
           <div className="flex flex-col items-center">
             <img src="logo.webp" alt="Logo" className="w-24 h-24 mb-6 drop-shadow-xl" />
             <h1 className="text-4xl md:text-6xl font-extrabold text-secondary dark:text-white tracking-tight leading-tight">
-              Explore the <span className="text-primary">Quran</span>
+              የኢትዮጵያ <span className="text-primary">ቁርአን</span> ፖርታል
             </h1>
             <p className="text-gray-500 dark:text-gray-400 text-lg md:text-xl max-w-2xl mx-auto mt-4">
-              Your comprehensive Ethiopian portal for Quranic studies, translations, and reflection.
+              በአማርኛ እና በሌሎች የሀገራችን ቋንቋዎች የተተረጎሙ የቁርኣን አንቀጾች መከታተያ፣ መማሪያና ማድመጫ መድረክ።
             </p>
           </div>
           
@@ -114,7 +160,7 @@ const Home: React.FC = () => {
                     setHeroError("");
                  }}
                >
-                 <option value="" disabled className="bg-white dark:bg-gray-800">Select Surah</option>
+                 <option value="" disabled className="bg-white dark:bg-gray-800">ምረጥ ሱራ (Select Surah)</option>
                  {SURAH_NAMES_EN.map((name, idx) => (
                    <option key={idx} value={idx + 1} className="bg-white dark:bg-gray-800">{idx + 1}. {name}</option>
                  ))}
@@ -141,7 +187,7 @@ const Home: React.FC = () => {
                 className="w-full bg-transparent outline-none text-gray-800 dark:text-white placeholder-gray-400 font-bold"
                 value={ayahInput}
                 onChange={(e) => setAyahInput(parseInt(e.target.value) || '')}
-              />
+               />
             </div>
 
             <div className="md:col-span-2 relative bg-white dark:bg-gray-700 rounded-2xl border border-gray-200 dark:border-gray-600">
@@ -149,7 +195,7 @@ const Home: React.FC = () => {
                  className="w-full h-full px-4 py-3.5 rounded-2xl outline-none appearance-none bg-transparent text-gray-800 dark:text-white cursor-pointer font-bold"
                  value={currentTranslationId}
                  onChange={(e) => setTranslationId(e.target.value)}
-               >
+                >
                  {translations.map(t => (
                    <option key={t.id} value={t.id} className="bg-white dark:bg-gray-800">{t.name}</option>
                  ))}
@@ -160,9 +206,9 @@ const Home: React.FC = () => {
             <button 
               onClick={handleOpen}
               disabled={!surahInput || (typeof surahInput === 'number' && surahInput > 114)}
-              className="md:col-span-2 bg-primary text-white py-3.5 rounded-2xl hover:bg-green-600 transition disabled:opacity-50 font-extrabold shadow-lg shadow-green-500/20 flex justify-center items-center"
+              className="md:col-span-2 bg-primary text-white py-3.5 rounded-2xl hover:bg-green-600 transition disabled:opacity-50 font-extrabold shadow-lg shadow-green-500/20 flex justify-center items-center cursor-pointer"
             >
-              Open
+              ክፈት (Open)
             </button>
           </div>
           {heroError && <p className="text-red-500 dark:text-red-400 text-sm font-bold bg-red-50 dark:bg-red-900/10 inline-block px-4 py-1 rounded-full">{heroError}</p>}
@@ -173,15 +219,15 @@ const Home: React.FC = () => {
       <section className="grid md:grid-cols-2 gap-8">
         <div className="bg-gradient-to-br from-secondary to-green-800 text-white p-8 md:p-10 rounded-3xl shadow-2xl relative overflow-hidden group">
           <div className="relative z-10">
-            <span className="inline-block px-3 py-1 bg-white/20 rounded-full text-xs font-bold uppercase tracking-widest mb-4 backdrop-blur-md">Daily Recommendation</span>
-            <h2 className="text-3xl font-bold mb-4">Surah {recommended.name}</h2>
-            <p className="text-white/70 mb-8 max-w-sm leading-relaxed">Start your day with spiritual clarity through this beautiful recitation.</p>
+            <span className="inline-block px-3 py-1 bg-white/20 rounded-full text-xs font-bold uppercase tracking-widest mb-4 backdrop-blur-md">ዕለታዊ ምክር | Daily Recommendation</span>
+            <h2 className="text-3xl font-bold mb-4">ሱረቱል {isLanguageAmharic ? SURAH_METADATA[recommended.id-1].nameAmh : recommended.name}</h2>
+            <p className="text-white/70 mb-8 max-w-sm leading-relaxed">ቀንዎን በቁርኣን አስተንትኖ እና በውብ ድምጽ ያሸብርቁ።</p>
             <div className="flex space-x-4">
-                <Link to={`/${currentTranslationId}/${recommended.id}`} className="flex items-center space-x-2 bg-white text-secondary hover:bg-white/90 px-6 py-3 rounded-xl font-bold transition shadow-xl">
-                <BookOpen size={20} /> <span>Read Now</span>
+                <Link to={`/${currentTranslationId}/${recommended.id}`} className="flex items-center space-x-2 bg-white text-secondary hover:bg-white/90 px-6 py-3 rounded-xl font-bold transition shadow-xl text-sm">
+                <BookOpen size={18} /> <span>አንብብ | Read</span>
                 </Link>
-                <button onClick={handleListenRecommended} className="flex items-center space-x-2 bg-white/10 hover:bg-white/20 px-6 py-3 rounded-xl font-bold transition backdrop-blur-md border border-white/20">
-                <Headphones size={20} /> <span>Listen</span>
+                <button onClick={handleListenRecommended} className="flex items-center space-x-2 bg-white/10 hover:bg-white/20 px-6 py-3 rounded-xl font-bold transition backdrop-blur-md border border-white/20 text-sm">
+                <Headphones size={18} /> <span>አድምጥ | Listen</span>
                 </button>
             </div>
           </div>
@@ -193,8 +239,8 @@ const Home: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 p-8 md:p-10 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 flex flex-col justify-between transition-colors">
            <div>
             <div className="flex justify-between items-center mb-8">
-                <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Recent Insights</h2>
-                <Link to="/blog" className="text-primary hover:text-green-600 flex items-center text-sm font-bold">Archives <ArrowRight size={16} className="ml-1" /></Link>
+                <h2 className="text-2xl font-bold text-gray-800 dark:text-white">የቅርብ ጊዜ ፅሁፎች</h2>
+                <Link to="/blog" className="text-primary hover:text-green-600 flex items-center text-sm font-bold">ሁሉም ፅሁፎች <ArrowRight size={16} className="ml-1" /></Link>
             </div>
             {BLOG_POSTS.slice(0, 1).map(post => (
                 <div key={post.id} className="group cursor-pointer" onClick={() => navigate(`/blog/${post.id}`)}>
@@ -203,49 +249,74 @@ const Home: React.FC = () => {
                 </div>
             ))}
            </div>
-           <button onClick={() => navigate(`/blog/${BLOG_POSTS[0].id}`)} className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-6 py-3 rounded-xl font-bold hover:bg-primary hover:text-white transition self-start mt-6">Continue Reading</button>
+           <button onClick={() => navigate(`/blog/${BLOG_POSTS[0].id}`)} className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 px-6 py-3 rounded-xl font-bold hover:bg-primary hover:text-white transition self-start mt-6">ማንበብ ቀጥል</button>
         </div>
       </section>
 
-      {/* Surah Grid */}
+      {/* Surah Grid with Custom Quranic Themed Layout (Request Part 4) */}
       <section>
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8">
-          <h2 className="text-3xl font-extrabold text-gray-800 dark:text-white">All Surahs</h2>
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8 border-b border-gray-150 dark:border-gray-800 pb-4">
+          <div>
+            <h2 className="text-3xl font-extrabold text-gray-800 dark:text-white tracking-tight">የሱራዎች መውጫ | Qur'an Chapters</h2>
+            <p className="text-xs text-slate-400 font-bold mt-1 uppercase tracking-tight">Browse and index total chapters of the Noble Qur'an.</p>
+          </div>
           <div className="flex space-x-2 bg-gray-100 dark:bg-gray-800 p-1.5 rounded-xl border border-gray-200 dark:border-gray-700">
              <button 
                 onClick={() => setSortOrder('regular')}
                 className={`px-6 py-2 rounded-lg text-sm transition font-bold ${sortOrder === 'regular' ? 'bg-white dark:bg-gray-700 shadow-md text-primary' : 'text-gray-500 hover:text-primary'}`}
              >
-               Order
+               በቅደም ተከተል (Sequential)
              </button>
              <button 
                 onClick={() => setSortOrder('revelation')}
                 className={`px-6 py-2 rounded-lg text-sm transition font-bold ${sortOrder === 'revelation' ? 'bg-white dark:bg-gray-700 shadow-md text-primary' : 'text-gray-500 hover:text-primary'}`}
              >
-               Revelation
+               በወረደበት ቅደም ተከተል (Revelation)
              </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {displayedSurahs.map((surah) => (
-            <Link 
-              key={surah.id} 
-              to={`/${currentTranslationId}/${surah.id}`}
-              className="bg-white dark:bg-gray-800 p-5 rounded-2xl shadow-sm hover:shadow-xl hover:border-primary border border-transparent transition-all flex items-center justify-between group"
-            >
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center font-bold text-base group-hover:bg-primary group-hover:text-white transition shadow-sm">
-                  {surah.id}
+        {/* Ornate Islamic grid container */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 border-t border-b border-slate-100 dark:border-slate-800/80 mt-10">
+          {displayedSurahs.map((surah) => {
+            const staticMeta = surah; // Already is SurahMeta from SURAH_METADATA
+            
+            return (
+              <Link 
+                key={staticMeta.id} 
+                to={`/${currentTranslationId}/${staticMeta.id}`}
+                className="group flex items-center justify-between p-6 hover:bg-slate-50/20 dark:hover:bg-slate-850/20 transition-all duration-300 border-b border-slate-100 dark:border-slate-850/60 md:border-r md:[&:nth-child(2n)]:border-r-0 lg:[&:nth-child(2n)]:border-r lg:border-r lg:[&:nth-child(3n)]:border-r-0"
+              >
+                <div className="flex items-center space-x-4">
+                  {/* Ornate Rub-el-Hizb or rotating dual-border badge */}
+                  <div className="relative w-11 h-11 flex items-center justify-center flex-shrink-0 select-none">
+                     <div className="absolute inset-0 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 rounded-sm transform rotate-45 group-hover:border-primary/50 transition duration-300"></div>
+                     <div className="absolute inset-0 border border-slate-200 dark:border-slate-700 bg-transparent rounded-sm transform rotate-0 scale-[0.88] group-hover:border-primary/30 transition duration-300"></div>
+                     <span className="relative z-10 text-xs font-bold text-slate-500 dark:text-slate-400 group-hover:text-primary transition duration-300">{staticMeta.id}</span>
+                  </div>
+                  
+                  {/* Arabic name and Verse count */}
+                  <div className="space-y-1">
+                    <span className="block font-arabic text-xl font-medium text-slate-800 dark:text-slate-200 leading-none group-hover:text-primary transition duration-300 pr-1 select-none">
+                      {staticMeta.nameAr}
+                    </span>
+                    
+                    <div className="flex items-center space-x-1.5 text-xs text-slate-400 dark:text-slate-500 font-bold select-none">
+                      <BookOpen size={13} className="text-sky-400 dark:text-sky-500 fill-sky-200/10" />
+                      <span>{staticMeta.ayahCount} Verse</span>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-extrabold text-gray-800 dark:text-gray-100">{surah.name}</h4>
-                  <span className="text-xs font-medium text-gray-400 uppercase tracking-tighter">Read Translation</span>
+
+                {/* Amharic Transliteration on the right */}
+                <div className="text-right pl-2">
+                  <h4 className="font-extrabold text-[#2d3748] dark:text-slate-100 group-hover:text-primary transition-colors duration-300 font-sans text-xl tracking-tight leading-none">
+                    {isLanguageAmharic ? staticMeta.nameAmh : staticMeta.nameEn}
+                  </h4>
                 </div>
-              </div>
-              <ArrowRight size={20} className="text-gray-200 dark:text-gray-700 group-hover:text-primary group-hover:translate-x-1 transition" />
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       </section>
     </div>

@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quran.et - Control Room</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: '#10B981', // Emerald 500
+              secondary: '#111827', // Gray 900
+              accent: '#F59E0B' // Amber 500
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #10B981;
+        border-radius: 4px;
+      }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans">
+
+    <!-- Auth Gateway Screen -->
+    <div id="auth-screen" class="hidden fixed inset-0 bg-slate-950 flex flex-col items-center justify-center p-4 z-50">
+        <div class="bg-white p-8 rounded-3xl shadow-2xl w-full max-w-md border border-slate-100 text-center space-y-6">
+            <div class="bg-red-50 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto text-red-500">
+                <i data-lucide="lock" class="w-8 h-8"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-black text-slate-800">Control Access Gate</h1>
+                <p class="text-xs text-slate-400 mt-1 uppercase tracking-wider">Secret Admin Workspace Required</p>
+            </div>
+            <div class="space-y-4">
+                <input 
+                    type="password" 
+                    id="admin-key-input" 
+                    placeholder="Enter Admin Access Key" 
+                    class="w-full p-4 border border-slate-250 rounded-xl bg-slate-50 text-slate-800 outline-none focus:border-primary font-bold text-center text-lg placeholder-slate-400"
+                />
+                <button 
+                    onclick="handleLogin()" 
+                    class="w-full bg-emerald-600 text-white py-4 rounded-xl font-extrabold hover:bg-emerald-700 transition shadow-lg shadow-emerald-500/20"
+                >
+                    Authenticate
+                </button>
+            </div>
+            <p id="auth-error" class="text-xs text-red-500 font-bold hidden"></p>
+        </div>
+    </div>
+
+    <!-- Main Admin Dashboard -->
+    <div id="dashboard-screen" class="hidden flex-grow flex flex-col">
+        
+        <!-- Header -->
+        <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-40 shadow-md">
+            <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <span class="text-xl font-black tracking-tight flex items-center gap-2">
+                        <span class="p-1 px-2.5 bg-emerald-500 text-slate-950 rounded-lg text-sm font-black">HQ</span>
+                        Quran.et <span class="text-emerald-400 font-normal text-sm">Control Console</span>
+                    </span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button onclick="handleLogout()" class="px-3.5 py-1.5 border border-slate-700 hover:border-red-500/50 hover:bg-red-500/10 rounded-lg text-xs font-bold text-slate-400 hover:text-red-400 transition flex items-center gap-1.5">
+                        <i data-lucide="log-out" class="w-3.5 h-3.5"></i> Log Out
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs Bar -->
+        <div class="border-b border-slate-200 bg-white">
+            <div class="max-w-7xl mx-auto px-4 flex space-x-8 overflow-x-auto">
+                <button onclick="setActiveTab('translations')" class="tab-btn px-1 py-4 border-b-2 font-bold text-sm tracking-tight flex items-center gap-2 transition" id="tab-translations">
+                    <i data-lucide="globe" class="w-4 h-4"></i> Translation XMLs
+                </button>
+                <button onclick="setActiveTab('blogs')" class="tab-btn px-1 py-4 border-b-2 font-bold text-sm tracking-tight flex items-center gap-2 transition" id="tab-blogs">
+                    <i data-lucide="file-text" class="w-4 h-4"></i> Blog Archive
+                </button>
+                <button onclick="setActiveTab('reciters')" class="tab-btn px-1 py-4 border-b-2 font-bold text-sm tracking-tight flex items-center gap-2 transition" id="tab-reciters">
+                    <i data-lucide="music" class="w-4 h-4"></i> Audio Reciters
+                </button>
+                <button onclick="setActiveTab('donations')" class="tab-btn px-1 py-4 border-b-2 font-bold text-sm tracking-tight flex items-center gap-2 transition" id="tab-donations">
+                    <i data-lucide="heart" class="w-4 h-4"></i> Support & Donations
+                </button>
+            </div>
+        </div>
+
+        <!-- Feedback Messages Container -->
+        <div class="max-w-7xl mx-auto w-full px-4 mt-6">
+            <div id="alert-box" class="hidden p-4 rounded-xl flex items-center shadow-md animate-fade-in">
+                <span id="alert-text" class="font-bold text-sm"></span>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <main class="max-w-7xl mx-auto px-4 py-8 flex-grow w-full">
+            
+            <!-- Tab: Translations -->
+            <section id="pane-translations" class="tab-pane hidden space-y-8">
+                <div class="grid md:grid-cols-3 gap-8">
+                    <!-- Uplink form -->
+                    <div class="md:col-span-1 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <i data-lucide="upload" class="text-emerald-500"></i> Add Translation XML
+                        </h2>
+                        <p class="text-xs text-slate-400">Upload standard translation XML files to instantly register indigenous languages.</p>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Language Name</label>
+                                <input type="text" id="trans-name-input" placeholder="e.g. Oromo" class="w-full p-3 border border-slate-200 rounded-xl outline-none focus:border-primary text-sm font-bold bg-slate-50" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Language Code (Slug)</label>
+                                <input type="text" id="trans-code-input" placeholder="e.g. orom" class="w-full p-3 border border-slate-200 rounded-xl outline-none focus:border-primary text-sm font-mono bg-slate-50" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Quran XML Source File</label>
+                                <div class="relative border-2 border-dashed border-slate-200 hover:border-primary rounded-xl p-6 text-center cursor-pointer bg-slate-50 transition">
+                                    <input type="file" id="trans-file-input" accept=".xml" onchange="readXMLFile(event)" class="absolute inset-0 opacity-0 cursor-pointer" />
+                                    <div class="pointer-events-none space-y-1">
+                                        <i data-lucide="file-code" class="w-8 h-8 text-slate-400 mx-auto"></i>
+                                        <p id="xml-label" class="text-xs font-bold text-slate-500">Browse XML file</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <button onclick="deployTranslation()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold transition shadow-md shadow-emerald-500/10">
+                                Deploy Translation XML
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Translation list table -->
+                    <div class="md:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <i data-lucide="database" class="text-emerald-500"></i> Active Languages
+                        </h2>
+                        <div class="overflow-x-auto rounded-xl border border-slate-200">
+                            <table class="min-w-full divide-y divide-slate-250">
+                                <thead class="bg-slate-55 bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
+                                    <tr>
+                                        <th class="px-6 py-3.5 text-left">Language</th>
+                                        <th class="px-6 py-3.5 text-left">Slug</th>
+                                        <th class="px-6 py-3.5 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="translations-list-rows" class="divide-y divide-slate-200 bg-white text-sm font-semibold">
+                                    <!-- Dynamic rows loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: Blogs -->
+            <section id="pane-blogs" class="tab-pane hidden space-y-8">
+                <div class="grid md:grid-cols-3 gap-8">
+                    <!-- Create Blog -->
+                    <div class="md:col-span-1 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <i data-lucide="plus-circle" class="text-emerald-500"></i> Write Article
+                        </h2>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Arcticle Title</label>
+                                <input type="text" id="blog-title-input" placeholder="Title of post" class="w-full p-3 border border-slate-200 rounded-xl outline-none focus:border-primary text-sm bg-slate-50" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Banner Image URL</label>
+                                <input type="text" id="blog-image-input" placeholder="https://images.unsplash..." class="w-full p-3 border border-slate-200 rounded-xl outline-none focus:border-primary text-sm bg-slate-50" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Snippet Summary</label>
+                                <input type="text" id="blog-excerpt-input" placeholder="Highlight summary" class="w-full p-3 border border-slate-200 rounded-xl outline-none focus:border-primary text-sm bg-slate-50" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Detailed Content</label>
+                                <textarea id="blog-content-input" rows="5" placeholder="Write full insight content here..." class="w-full p-3 border border-slate-200 rounded-xl outline-none focus:border-primary text-sm bg-slate-50"></textarea>
+                            </div>
+                            <button onclick="publishBlog()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold transition shadow-md shadow-emerald-500/10">
+                                Publish Article
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Manage Blogs -->
+                    <div class="md:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <i data-lucide="book-open" class="text-emerald-500"></i> Articles Archive
+                        </h2>
+                        <div id="blogs-archive-list" class="divide-y divide-slate-100">
+                            <!-- Dynamic blogs here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: Reciters -->
+            <section id="pane-reciters" class="tab-pane hidden space-y-8">
+                <div class="grid md:grid-cols-3 gap-8">
+                    <!-- Add Qari -->
+                    <div class="md:col-span-1 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <i data-lucide="user-plus" class="text-emerald-500"></i> Add Reciter (EveryAyah)
+                        </h2>
+                        <p class="text-xs text-slate-400">Add dynamic recitation channels hosted by EveryAyah.com or standard Surah recitation pools.</p>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Reciter Display Name</label>
+                                <input type="text" id="reciter-name-input" placeholder="e.g. Abdullah Basfar" class="w-full p-3 border border-slate-200 rounded-xl outline-none focus:border-primary text-sm font-bold bg-slate-55 bg-slate-50" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Subfolder ID / Directory</label>
+                                <input type="text" id="reciter-folder-input" placeholder="e.g. Abdullah_Basfar_32kbps" class="w-full p-3 border border-slate-200 rounded-xl outline-none focus:border-primary text-sm font-mono bg-slate-55 bg-slate-50" />
+                            </div>
+                            <div class="flex items-center justify-between p-3.5 bg-slate-50 rounded-xl border border-slate-150">
+                                <div>
+                                    <span class="text-xs font-bold text-slate-800">EveryAyah.com Format</span>
+                                    <p class="text-[10px] text-slate-400">Plays ayahs step-by-step</p>
+                                </div>
+                                <input type="checkbox" id="reciter-type-input" checked class="w-5 h-5 accent-primary" />
+                            </div>
+                            <button onclick="addReciter()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold transition shadow-md shadow-emerald-500/10">
+                                Register Reciter
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- List Qaris -->
+                    <div class="md:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <i data-lucide="music" class="text-emerald-500"></i> Audio Stream Registers
+                        </h2>
+                        <div class="overflow-x-auto rounded-xl border border-slate-200">
+                            <table class="min-w-full divide-y divide-slate-250">
+                                <thead class="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
+                                    <tr>
+                                        <th class="px-6 py-3.5 text-left">Reciter</th>
+                                        <th class="px-6 py-3.5 text-left">Subfolder ID</th>
+                                        <th class="px-6 py-3.5 text-left">Scope</th>
+                                        <th class="px-6 py-3.5 text-right">Delete</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="reciters-list-rows" class="divide-y divide-slate-200 bg-white text-sm font-semibold">
+                                    <!-- Dynamic reciters loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab: Donations -->
+            <section id="pane-donations" class="tab-pane hidden space-y-8">
+                <div class="max-w-3xl bg-white p-8 rounded-3xl border border-slate-200 shadow-sm space-y-8">
+                    <div class="flex items-center space-x-3">
+                        <div class="p-3.5 bg-red-50 text-red-500 rounded-2xl shadow-inner">
+                            <i data-lucide="heart" fill="currentColor"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-extrabold text-slate-800">Support & Donation Settings</h2>
+                            <p class="text-xs text-slate-400">Configure global support overlays & donation CTA paths.</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6">
+                        <div class="flex items-center justify-between p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                            <div>
+                                <label class="font-bold text-slate-800 block">Enable Live Modal Overlay</label>
+                                <span class="text-xs text-slate-400">Triggers a support prompt after a few seconds of initial visiting</span>
+                            </div>
+                            <input type="checkbox" id="donation-toggle" class="w-6 h-6 accent-primary" />
+                        </div>
+
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Request Message</label>
+                                <textarea id="donation-message-input" rows="3" class="w-full p-4 border border-slate-200 rounded-2xl outline-none focus:border-primary bg-slate-50 text-slate-700"></textarea>
+                            </div>
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Button CTA Text</label>
+                                    <input type="text" id="donation-btn-input" class="w-full p-4 border border-slate-200 rounded-2xl outline-none focus:border-primary bg-slate-50 font-bold" />
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Target Destination URL</label>
+                                    <input type="text" id="donation-link-input" class="w-full p-4 border border-slate-200 rounded-2xl outline-none focus:border-primary bg-slate-50 font-mono text-sm" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <button onclick="updateDonationConfig()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 py-3.5 rounded-xl transition shadow-lg shadow-emerald-500/20">
+                            Save Donation Settings
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- Scripting for Dynamic Admin operations -->
+    <script>
+        let xmlPayload = "";
+        let cacheData = null;
+
+        // Check verification token is kept in Storage
+        document.addEventListener("DOMContentLoaded", () => {
+            const token = localStorage.getItem("admin_secret_token");
+            if (token) {
+                verifyAndLoadDashboard(token);
+            } else {
+                showAuthScreen();
+            }
+        });
+
+        function showAuthScreen() {
+            document.getElementById("auth-screen").classList.remove("hidden");
+            document.getElementById("dashboard-screen").classList.add("hidden");
+        }
+
+        function showDashboard() {
+            document.getElementById("auth-screen").classList.add("hidden");
+            document.getElementById("dashboard-screen").classList.remove("hidden");
+            setActiveTab("translations");
+            loadAllData();
+        }
+
+        async function verifyAndLoadDashboard(token) {
+            try {
+                const res = await fetch("/api/admin/verify", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ key: token })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    localStorage.setItem("admin_secret_token", token);
+                    showDashboard();
+                } else {
+                    showAuthError("Authentication Key is invalid. Try again.");
+                }
+            } catch (e) {
+                showAuthError("Database / Network error in verifying portal credentials.");
+            }
+        }
+
+        function showAuthError(msg) {
+            localStorage.removeItem("admin_secret_token");
+            document.getElementById("auth-error").innerText = msg;
+            document.getElementById("auth-error").classList.remove("hidden");
+            showAuthScreen();
+        }
+
+        function handleLogin() {
+            const key = document.getElementById("admin-key-input").value;
+            if (!key) return;
+            verifyAndLoadDashboard(key);
+        }
+
+        function handleLogout() {
+            localStorage.removeItem("admin_secret_token");
+            location.reload();
+        }
+
+        // Tab selection logic
+        function setActiveTab(tabId) {
+            document.querySelectorAll(".tab-btn").forEach(btn => {
+                btn.className = "tab-btn px-1 py-4 border-b-2 border-transparent text-slate-400 hover:text-slate-600 font-semibold text-sm cursor-pointer transition";
+            });
+            document.querySelectorAll(".tab-pane").forEach(pane => pane.classList.add("hidden"));
+
+            const activeBtn = document.getElementById(`tab-${tabId}`);
+            if (activeBtn) activeBtn.className = "tab-btn px-1 py-4 border-b-2 border-emerald-500 font-extrabold text-sm tracking-tight text-emerald-600 cursor-pointer transition";
+            
+            const activePane = document.getElementById(`pane-${tabId}`);
+            if (activePane) activePane.classList.remove("hidden");
+        }
+
+        function triggerAlert(msg, type = "success") {
+            const box = document.getElementById("alert-box");
+            const text = document.getElementById("alert-text");
+            text.innerText = msg;
+            box.className = `p-4 rounded-xl flex items-center shadow-md animate-fade-in ${type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`;
+            box.classList.remove("hidden");
+            setTimeout(() => box.classList.add("hidden"), 4000);
+        }
+
+        // Fetch API request wrapper with admin token injected
+        async function fetchAPI(url, options = {}) {
+            const token = localStorage.getItem("admin_secret_token") || "";
+            options.headers = {
+                ...options.headers,
+                "Authorization": `Bearer ${token}`,
+                "x-admin-token": token,
+                "Content-Type": "application/json"
+            };
+            const res = await fetch(url, options);
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({ error: "Server request failed" }));
+                throw new Error(err.error || `HTTP ${res.status}`);
+            }
+            return res.json();
+        }
+
+        async function loadAllData() {
+            try {
+                // Fetch central DB
+                const data = await fetchAPI("/api/admin/data");
+                cacheData = data;
+                
+                // 1. Load translations
+                renderTranslationsTable();
+
+                // 2. Load blogs
+                renderBlogs();
+
+                // 3. Load reciters
+                renderReciters();
+
+                // 4. Load donations
+                if (data.donationConfig) {
+                    document.getElementById("donation-toggle").checked = !!data.donationConfig.enabled;
+                    document.getElementById("donation-message-input").value = data.donationConfig.message || "";
+                    document.getElementById("donation-btn-input").value = data.donationConfig.buttonText || "";
+                    document.getElementById("donation-link-input").value = data.donationConfig.link || "";
+                }
+                
+                // Reinitialize icons
+                lucide.createIcons();
+            } catch (e) {
+                triggerAlert("Could not synchronized with administration database: " + e.message, "error");
+            }
+        }
+
+        // Render functions
+        function renderTranslationsTable() {
+            const tbody = document.getElementById("translations-list-rows");
+            tbody.innerHTML = "";
+            if (cacheData.translations.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="p-8 text-center text-slate-400 font-bold">No translations added to database file. AM (Amharic Default) is running from codebase.</td></tr>`;
+                return;
+            }
+            cacheData.translations.forEach(tr => {
+                const trElement = document.createElement("tr");
+                trElement.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-slate-800">${escapeHTML(tr.name)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-slate-500 font-mono text-xs uppercase">${escapeHTML(tr.id)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right">
+                        <button onclick="deleteTranslation('${tr.id}')" class="text-red-500 hover:text-red-700 transition font-bold text-xs bg-red-50 hover:bg-red-100 p-1.5 px-3 rounded-lg flex items-center gap-1.5 ml-auto">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(trElement);
+            });
+            lucide.createIcons();
+        }
+
+        function renderBlogs() {
+            const list = document.getElementById("blogs-archive-list");
+            list.innerHTML = "";
+            if (cacheData.blogs.length === 0) {
+                list.innerHTML = `<p class="p-8 text-center text-slate-400 font-bold">Empty archives</p>`;
+                return;
+            }
+            cacheData.blogs.forEach(b => {
+                const div = document.createElement("div");
+                div.className = "py-4 flex items-center justify-between gap-4";
+                div.innerHTML = `
+                    <div class="flex items-center space-x-4">
+                        <img src="${escapeHTML(b.image)}" class="w-12 h-12 rounded-lg object-cover" />
+                        <div>
+                            <h4 class="font-bold text-slate-800 leading-tight">${escapeHTML(b.title)}</h4>
+                            <span class="text-[10px] text-slate-450 uppercase text-slate-400 select-none">${escapeHTML(b.date)} | ${escapeHTML(b.excerpt)}</span>
+                        </div>
+                    </div>
+                    <button onclick="deleteBlog(${b.id})" class="text-red-500 hover:text-red-700 font-bold text-xs bg-red-50 hover:bg-red-100 p-2 rounded-lg">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                `;
+                list.appendChild(div);
+            });
+            lucide.createIcons();
+        }
+
+        function renderReciters() {
+            const tbody = document.getElementById("reciters-list-rows");
+            tbody.innerHTML = "";
+            cacheData.reciters.forEach(r => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td class="px-6 py-4 text-slate-800">${escapeHTML(r.name)}</td>
+                    <td class="px-6 py-4 text-slate-500 font-mono text-xs">${escapeHTML(r.subfolder)}</td>
+                    <td class="px-6 py-4">
+                        <span class="p-1 px-2 text-[10px] uppercase font-black rounded-md ${r.isEveryAyah ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}">
+                            ${r.isEveryAyah ? 'Every Ayah' : 'Surah Level'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <button onclick="deleteReciter('${r.subfolder}')" class="text-red-500 hover:text-red-700 font-bold text-xs bg-red-50 hover:bg-red-100 p-1.5 px-3 rounded-lg flex items-center gap-1.5 ml-auto">
+                            <i data-lucide="trash" class="w-3.5 h-3.5"></i> Delete
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            lucide.createIcons();
+        }
+
+        // Actions
+        async function readXMLFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            document.getElementById("xml-label").innerText = `Loading ${file.name}...`;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                xmlPayload = evt.target.result;
+                document.getElementById("xml-label").innerText = `XML Loaded: ${file.name} (${Math.round(file.size / 1024)} KB)`;
+                triggerAlert("Quran Translation XML parsed. Ready to deploy.");
+            };
+            reader.readAsText(file);
+        }
+
+        async function deployTranslation() {
+            const name = document.getElementById("trans-name-input").value;
+            const slug = document.getElementById("trans-code-input").value.trim().toLowerCase();
+            if (!name || !slug || !xmlPayload) {
+                triggerAlert("Please feed name, slug code and XML file structure.", "error");
+                return;
+            }
+            try {
+                await fetchAPI("/api/admin/translations", {
+                    method: "POST",
+                    body: JSON.stringify({ id: slug, name, xml: xmlPayload })
+                });
+                triggerAlert(`Translation XML for ${name} has been deployed live!`);
+                
+                // Clear input
+                document.getElementById("trans-name-input").value = "";
+                document.getElementById("trans-code-input").value = "";
+                window.xmlPayload = "";
+                document.getElementById("xml-label").innerText = "Browse XML file";
+
+                loadAllData();
+            } catch (e) {
+                triggerAlert("Vite / XML Error deploying translation: " + e.message, "error");
+            }
+        }
+
+        async function deleteTranslation(id) {
+            if (!confirm("Are you sure you want to permanently delete this translation XML dataset? This is irreversible.")) return;
+            try {
+                await fetchAPI(`/api/admin/translations/${id}`, { method: "DELETE" });
+                triggerAlert("Dataset translation destroyed successfully.");
+                loadAllData();
+            } catch (e) {
+                triggerAlert("Error: " + e.message, "error");
+            }
+        }
+
+        async function publishBlog() {
+            const title = document.getElementById("blog-title-input").value;
+            const image = document.getElementById("blog-image-input").value;
+            const excerpt = document.getElementById("blog-excerpt-input").value;
+            const content = document.getElementById("blog-content-input").value;
+            
+            if (!title || !content) {
+                triggerAlert("Title and detailed content cannot be empty assets.", "error");
+                return;
+            }
+
+            try {
+                await fetchAPI("/api/admin/blogs", {
+                    method: "POST",
+                    body: JSON.stringify({ title, image, excerpt, content })
+                });
+                triggerAlert("Blog post has slipped into live streams!");
+                
+                // Clean fields
+                document.getElementById("blog-title-input").value = "";
+                document.getElementById("blog-image-input").value = "";
+                document.getElementById("blog-excerpt-input").value = "";
+                document.getElementById("blog-content-input").value = "";
+
+                loadAllData();
+            } catch (e) {
+                triggerAlert("Error publishing blog article: " + e.message, "error");
+            }
+        }
+
+        async function deleteBlog(id) {
+            if (!confirm("Are you sure you want to delete this blog post?")) return;
+            try {
+                await fetchAPI(`/api/admin/blogs/${id}`, { method: "DELETE" });
+                triggerAlert("Blog article has been deleted.");
+                loadAllData();
+            } catch (e) {
+                triggerAlert("Error: " + e.message, "error");
+            }
+        }
+
+        async function addReciter() {
+            const name = document.getElementById("reciter-name-input").value;
+            const subfolder = document.getElementById("reciter-folder-input").value.trim();
+            const isEveryAyah = document.getElementById("reciter-type-input").checked;
+
+            if (!name || !subfolder) {
+                triggerAlert("Both reciter display name and subfolder ID are required.", "error");
+                return;
+            }
+
+            try {
+                await fetchAPI("/api/admin/reciters", {
+                    method: "POST",
+                    body: JSON.stringify({ name, subfolder, isEveryAyah })
+                });
+                triggerAlert(`Reciter ${name} successfully launched!`);
+
+                document.getElementById("reciter-name-input").value = "";
+                document.getElementById("reciter-folder-input").value = "";
+
+                loadAllData();
+            } catch (e) {
+                triggerAlert("Error adding reciter: " + e.message, "error");
+            }
+        }
+
+        async function deleteReciter(subfolder) {
+            if (!confirm("Are you sure you want to delete this reciter?")) return;
+            try {
+                await fetchAPI("/api/admin/reciters", {
+                    method: "DELETE",
+                    body: JSON.stringify({ subfolder })
+                });
+                triggerAlert("Reciter deleted.");
+                loadAllData();
+            } catch (e) {
+                triggerAlert("Error: " + e.message, "error");
+            }
+        }
+
+        async function updateDonationConfig() {
+            const enabled = document.getElementById("donation-toggle").checked;
+            const message = document.getElementById("donation-message-input").value;
+            const buttonText = document.getElementById("donation-btn-input").value;
+            const link = document.getElementById("donation-link-input").value;
+
+            try {
+                await fetchAPI("/api/admin/donation", {
+                    method: "PUT",
+                    body: JSON.stringify({ message, buttonText, link, enabled })
+                });
+                triggerAlert("Support overlay configuration saved and deployed.");
+                loadAllData();
+            } catch (e) {
+                triggerAlert("Error: " + e.message, "error");
+            }
+        }
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+    </script>
+</body>
+</html>

@@ -6,29 +6,38 @@ import { getFullSurahAudioUrl } from '../services/quranService';
 import { Play, Search, User } from 'lucide-react';
 
 const AudioPage: React.FC = () => {
-  const { playSurahAudio } = useApp();
+  const { playSurahAudio, reciters } = useApp();
   const location = useLocation();
-  const [selectedReciter, setSelectedReciter] = useState(RECITERS[0]);
-  const [filter, setFilter] = useState('');
+
+  // Filter reciters that support full Surah recitation
+  const surahReciters = reciters.filter(r => !r.isEveryAyah);
+  const activeReciters = surahReciters.length > 0 ? surahReciters : RECITERS;
+  
+  const [selectedReciterName, setSelectedReciterName] = useState('');
+
+  const currentReciter = activeReciters.find(r => r.name === selectedReciterName) || activeReciters[0];
 
   // Handle auto-play from Navigation State
   useEffect(() => {
-    if (location.state && (location.state as any).autoPlayId) {
+    if (location.state && (location.state as any).autoPlayId && currentReciter) {
       const state = location.state as any;
       setTimeout(() => {
         handlePlay(state.autoPlayId, state.surahName);
       }, 500);
     }
-  }, [location.state]);
+  }, [location.state, currentReciter]);
 
   const handlePlay = (surahIndex: number, surahName: string) => {
-     const url = getFullSurahAudioUrl(selectedReciter.subfolder, surahIndex);
-     playSurahAudio(url, surahName, selectedReciter.name, surahIndex, selectedReciter.subfolder);
+     if (!currentReciter) return;
+     const url = getFullSurahAudioUrl(currentReciter.subfolder, surahIndex);
+     playSurahAudio(url, surahName, currentReciter.name, surahIndex, currentReciter.subfolder);
   };
 
   const filteredSurahs = SURAH_NAMES_EN
     .map((name, i) => ({ id: i + 1, name }))
     .filter(s => s.name.toLowerCase().includes(filter.toLowerCase()) || s.id.toString() === filter);
+
+  const [filter, setFilter] = useState('');
 
   return (
     <div className="space-y-10 pb-32 animate-fade-in">
@@ -47,13 +56,12 @@ const AudioPage: React.FC = () => {
                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" size={20} />
                  <select 
                    className="w-full pl-12 pr-4 py-4 border border-gray-200 dark:border-gray-600 rounded-2xl bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none font-bold transition-all appearance-none cursor-pointer"
-                   value={selectedReciter.name}
+                   value={currentReciter?.name || ''}
                    onChange={(e) => {
-                      const r = RECITERS.find(rec => rec.name === e.target.value);
-                      if (r) setSelectedReciter(r);
+                      setSelectedReciterName(e.target.value);
                    }}
                  >
-                   {RECITERS.map(r => <option key={r.name} value={r.name}>{r.name}</option>)}
+                   {activeReciters.map(r => <option key={r.subfolder} value={r.name}>{r.name}</option>)}
                  </select>
                </div>
             </div>

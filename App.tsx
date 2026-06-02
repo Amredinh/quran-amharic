@@ -7,7 +7,6 @@ import ReadingPage from './pages/ReadingPage';
 import AudioPage from './pages/AudioPage';
 import BlogPage from './pages/BlogPage';
 import BlogPost from './pages/BlogPost';
-import AdminPage from './pages/AdminPage';
 import GlobalAudioPlayer from './components/GlobalAudioPlayer';
 
 const App: React.FC = () => {
@@ -23,9 +22,6 @@ const App: React.FC = () => {
             <Route path="/audio" element={<AudioPage />} />
             <Route path="/blog" element={<BlogPage />} />
             <Route path="/blog/:id" element={<BlogPost />} />
-            
-            {/* Secret Admin Route */}
-            <Route path="/secret-admin" element={<AdminPage />} />
           </Routes>
           <GlobalAudioPlayer />
         </Layout>
